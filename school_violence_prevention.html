@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nói Không Với Bạo Lực Học Đường - 3D Experience</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&family=Montserrat:wght@700;900&display=swap" rel="stylesheet">
+    
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <!-- Vanilla Tilt for 3D Card effects -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.0/vanilla-tilt.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        heading: ['Montserrat', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#1e3a8a', // blue-900
+                        secondary: '#3b82f6', // blue-500
+                        accent: '#f97316', // orange-500
+                        danger: '#ef4444', // red-500
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+            background-color: #f8fafc;
+        }
+
+        /* 3D Text Typography */
+        .text-3d {
+            font-family: 'Montserrat', sans-serif;
+            color: #ffffff;
+            text-shadow: 
+                0 1px 0 #cccccc, 
+                0 2px 0 #c9c9c9, 
+                0 3px 0 #bbb, 
+                0 4px 0 #b9b9b9, 
+                0 5px 0 #aaa, 
+                0 6px 1px rgba(0,0,0,.1), 
+                0 0 5px rgba(0,0,0,.1), 
+                0 1px 3px rgba(0,0,0,.3), 
+                0 3px 5px rgba(0,0,0,.2), 
+                0 5px 10px rgba(0,0,0,.25), 
+                0 10px 10px rgba(0,0,0,.2), 
+                0 20px 20px rgba(0,0,0,.15);
+            transform-style: preserve-3d;
+        }
+
+        /* Hero ThreeJS Container */
+        #hero-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none; /* Let clicks pass through */
+        }
+
+        /* Glassmorphism utility */
+        .glass {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .glass-dark {
+            background: rgba(30, 58, 138, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* 3D Tabs CSS */
+        .tab-wrapper {
+            perspective: 1200px;
+        }
+        .tab-content {
+            transform-style: preserve-3d;
+            position: relative;
+            min-height: 300px;
+        }
+        .tab-panel {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            backface-visibility: hidden;
+            transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0;
+            pointer-events: none;
+            transform: rotateY(90deg) translateZ(50px);
+        }
+        .tab-panel.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: rotateY(0deg) translateZ(0);
+            position: relative;
+            z-index: 10;
+        }
+        .tab-panel.inactive-left {
+            transform: rotateY(-90deg) translateZ(50px);
+        }
+
+        /* Floating 3D Cards for Pledges */
+        .pledge-card {
+            animation: float-3d 4s ease-in-out infinite;
+            transform-style: preserve-3d;
+            box-shadow: 
+                -10px 10px 20px rgba(0,0,0,0.1),
+                inset 0 0 0 1px rgba(255,255,255,0.5);
+            transition: transform 0.3s ease;
+        }
+        
+        .pledge-card:hover {
+            animation-play-state: paused;
+            transform: scale(1.05) translateZ(20px) rotateX(10deg);
+            z-index: 20;
+        }
+
+        @keyframes float-3d {
+            0% { transform: translateY(0px) rotateX(5deg) rotateY(-5deg); }
+            50% { transform: translateY(-15px) rotateX(-5deg) rotateY(5deg); }
+            100% { transform: translateY(0px) rotateX(5deg) rotateY(-5deg); }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #3b82f6;
+            border-radius: 5px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #1e3a8a;
+        }
+
+        /* Quiz Feedback Animations */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        .correct-ans {
+            background-color: #22c55e !important; /* green-500 */
+            color: white;
+            border-color: #16a34a;
+            transform: scale(1.02);
+            transition: all 0.3s;
+        }
+        .wrong-ans {
+            background-color: #ef4444 !important; /* red-500 */
+            color: white;
+            border-color: #dc2626;
+            animation: shake 0.4s;
+        }
+    </style>
+</head>
+<body class="text-gray-800 antialiased">
+
+    <nav class="fixed w-full z-50 glass shadow-sm top-0 transition-all duration-300" id="navbar">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-20">
+                <div class="flex-shrink-0 flex items-center gap-3 cursor-pointer" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-secondary to-accent flex items-center justify-center text-white shadow-lg">
+                        <i class="fa-solid fa-shield-heart text-xl"></i>
+                    </div>
+                    <span class="font-heading font-bold text-xl text-primary uppercase tracking-wider">SafeSchool</span>
+                </div>
+                <div class="hidden md:flex space-x-8">
+                    <a href="#types" class="text-gray-700 hover:text-secondary font-semibold transition">Phân Loại</a>
+                    <a href="#guide" class="text-gray-700 hover:text-secondary font-semibold transition">Cẩm Nang</a>
+                    <a href="#quiz" class="text-gray-700 hover:text-secondary font-semibold transition">Trắc Nghiệm</a>
+                    <a href="#pledge" class="bg-accent text-white px-5 py-2 rounded-full font-bold hover:bg-orange-600 transition shadow-md hover:shadow-lg transform hover:-translate-y-1">Góc Cam Kết</a>
+                </div>
+                <!-- Mobile Menu Button -->
+                <div class="md:hidden flex items-center">
+                    <button id="mobile-menu-btn" class="text-gray-700 focus:outline-none">
+                        <i class="fa-solid fa-bars text-2xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden glass absolute w-full border-t border-gray-200">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                <a href="#types" class="block px-3 py-2 text-base font-medium text-gray-700 hover:bg-blue-50 rounded-md">Phân Loại</a>
+                <a href="#guide" class="block px-3 py-2 text-base font-medium text-gray-700 hover:bg-blue-50 rounded-md">Cẩm Nang</a>
+                <a href="#quiz" class="block px-3 py-2 text-base font-medium text-gray-700 hover:bg-blue-50 rounded-md">Trắc Nghiệm</a>
+                <a href="#pledge" class="block px-3 py-2 text-base font-bold text-accent hover:bg-blue-50 rounded-md">Góc Cam Kết</a>
+            </div>
+        </div>
+    </nav>
+
+    <header class="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-blue-900 to-blue-950 pt-20">
+        <!-- 3D Background Canvas -->
+        <div id="hero-canvas"></div>
+        
+        <div class="relative z-10 text-center px-4 max-w-5xl mx-auto pointer-events-none">
+            <span class="inline-block py-1 px-3 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30 text-sm font-semibold tracking-widest uppercase mb-6 backdrop-blur-sm shadow-[0_0_15px_rgba(249,115,22,0.4)]">
+                Chiến dịch hành động 2026
+            </span>
+            <h1 class="text-5xl md:text-7xl font-heading font-black mb-6 text-3d leading-tight pointer-events-auto">
+                NÓI KHÔNG VỚI <br> <span class="text-accent">BẠO LỰC HỌC ĐƯỜNG</span>
+            </h1>
+            <p class="mt-4 text-xl md:text-2xl text-blue-100 mb-10 max-w-3xl mx-auto font-light pointer-events-auto text-shadow-sm">
+                Xây dựng một môi trường học tập an toàn, tôn trọng và yêu thương. Mỗi hành động bảo vệ nhỏ đều tạo nên một sức mạnh to lớn.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center pointer-events-auto">
+                <a href="#pledge" class="px-8 py-4 bg-gradient-to-r from-accent to-orange-600 text-white rounded-full font-bold text-lg shadow-[0_10px_25px_rgba(249,115,22,0.4)] hover:shadow-[0_15px_35px_rgba(249,115,22,0.6)] transform hover:-translate-y-1 transition-all duration-300">
+                    <i class="fa-solid fa-pen-nib mr-2"></i> Ký Cam Kết Ngay
+                </a>
+                <a href="#types" class="px-8 py-4 glass-dark text-white rounded-full font-bold text-lg hover:bg-white/10 transition-all duration-300">
+                    Tìm Hiểu Thêm
+                </a>
+            </div>
+        </div>
+        
+        <!-- Scroll indicator -->
+        <div class="absolute bottom-10 left-1/2 transform -translate-x-1/2 z-10 text-white/70 animate-bounce">
+            <i class="fa-solid fa-chevron-down text-3xl"></i>
+        </div>
+    </header>
+
+    <section id="types" class="py-24 bg-white relative">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl md:text-5xl font-heading font-bold text-primary mb-4">4 Dạng Bạo Lực Cần Nhận Diện</h2>
+                <div class="w-24 h-1 bg-accent mx-auto rounded-full"></div>
+                <p class="mt-6 text-lg text-gray-600 max-w-2xl mx-auto">Nhận biết đúng các hình thức bạo lực là bước đầu tiên để ngăn chặn chúng. Bạo lực không chỉ là những vết thương ngoài da.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <!-- Card 1 -->
+                <div class="bg-gradient-to-br from-blue-50 to-white rounded-2xl p-6 shadow-xl border border-gray-100 flex flex-col items-center text-center cursor-pointer"
+                     data-tilt data-tilt-max="20" data-tilt-speed="400" data-tilt-glare="true" data-tilt-max-glare="0.5" style="transform-style: preserve-3d;">
+                    <div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center text-secondary text-3xl mb-6 shadow-inner" style="transform: translateZ(30px);">
+                        <i class="fa-solid fa-hand-fist"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-3" style="transform: translateZ(20px);">Bạo Lực Thể Chất</h3>
+                    <p class="text-gray-600 text-sm" style="transform: translateZ(10px);">
+                        Các hành vi như đánh đập, xô xát, cào cấu, hoặc sử dụng vũ khí gây tổn thương trực tiếp lên cơ thể người khác.
+                    </p>
+                </div>
+
+                <!-- Card 2 -->
+                <div class="bg-gradient-to-br from-purple-50 to-white rounded-2xl p-6 shadow-xl border border-gray-100 flex flex-col items-center text-center cursor-pointer"
+                     data-tilt data-tilt-max="20" data-tilt-speed="400" data-tilt-glare="true" data-tilt-max-glare="0.5" style="transform-style: preserve-3d;">
+                    <div class="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 text-3xl mb-6 shadow-inner" style="transform: translateZ(30px);">
+                        <i class="fa-solid fa-comment-slash"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-3" style="transform: translateZ(20px);">Bạo Lực Tinh Thần</h3>
+                    <p class="text-gray-600 text-sm" style="transform: translateZ(10px);">
+                        Lăng mạ, chửi rủa, đe dọa, cô lập, tẩy chay hoặc lan truyền tin đồn thất thiệt gây tổn thương tâm lý nghiêm trọng.
+                    </p>
+                </div>
+
+                <!-- Card 3 -->
+                <div class="bg-gradient-to-br from-red-50 to-white rounded-2xl p-6 shadow-xl border border-gray-100 flex flex-col items-center text-center cursor-pointer"
+                     data-tilt data-tilt-max="20" data-tilt-speed="400" data-tilt-glare="true" data-tilt-max-glare="0.5" style="transform-style: preserve-3d;">
+                    <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center text-danger text-3xl mb-6 shadow-inner" style="transform: translateZ(30px);">
+                        <i class="fa-solid fa-mobile-screen-button"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-3" style="transform: translateZ(20px);">Bạo Lực Mạng (Cyberbullying)</h3>
+                    <p class="text-gray-600 text-sm" style="transform: translateZ(10px);">
+                        Sử dụng mạng xã hội, tin nhắn để quấy rối, đăng ảnh nhạy cảm/chế giễu, hoặc lập nhóm nói xấu trên không gian mạng.
+                    </p>
+                </div>
+
+                <!-- Card 4 -->
+                <div class="bg-gradient-to-br from-orange-50 to-white rounded-2xl p-6 shadow-xl border border-gray-100 flex flex-col items-center text-center cursor-pointer"
+                     data-tilt data-tilt-max="20" data-tilt-speed="400" data-tilt-glare="true" data-tilt-max-glare="0.5" style="transform-style: preserve-3d;">
+                    <div class="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center text-accent text-3xl mb-6 shadow-inner" style="transform: translateZ(30px);">
+                        <i class="fa-solid fa-money-bill-transfer"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-3" style="transform: translateZ(20px);">Bạo Lực Tài Sản</h3>
+                    <p class="text-gray-600 text-sm" style="transform: translateZ(10px);">
+                        Hành vi tống tiền, trấn lột, trộm cắp, hoặc cố ý phá hoại đồ dùng học tập, tài sản cá nhân của nạn nhân.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="guide" class="py-24 bg-blue-50">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row items-center gap-12">
+                <!-- Left: 3D Illustration / Graphic -->
+                <div class="w-full md:w-1/3 text-center" data-tilt data-tilt-scale="1.05">
+                    <div class="relative w-64 h-64 mx-auto bg-gradient-to-br from-secondary to-primary rounded-3xl shadow-[0_20px_50px_rgba(30,58,138,0.3)] flex items-center justify-center transform rotate-3">
+                        <i class="fa-solid fa-book-open-reader text-8xl text-white opacity-90 transform -rotate-3"></i>
+                        <div class="absolute -bottom-4 -right-4 w-20 h-20 bg-accent rounded-full flex items-center justify-center shadow-lg border-4 border-white animate-pulse">
+                            <i class="fa-solid fa-lightbulb text-3xl text-white"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: 3D Tabs -->
+                <div class="w-full md:w-2/3">
+                    <h2 class="text-3xl md:text-4xl font-heading font-bold text-primary mb-6">Cẩm Nang & Xử Lý</h2>
+                    
+                    <!-- Tab Controls -->
+                    <div class="flex space-x-2 mb-8 bg-white p-2 rounded-xl shadow-sm inline-flex">
+                        <button class="tab-btn active px-6 py-3 rounded-lg font-semibold text-sm md:text-base transition-colors bg-primary text-white" data-target="tab1">Nạn Nhân</button>
+                        <button class="tab-btn px-6 py-3 rounded-lg font-semibold text-sm md:text-base text-gray-500 hover:text-primary transition-colors" data-target="tab2">Người Chứng Kiến</button>
+                        <button class="tab-btn px-6 py-3 rounded-lg font-semibold text-sm md:text-base text-gray-500 hover:text-primary transition-colors" data-target="tab3">Dấu Hiệu</button>
+                    </div>
+
+                    <!-- Tab Contents (3D Wrapper) -->
+                    <div class="tab-wrapper">
+                        <div class="tab-content bg-white rounded-2xl shadow-xl p-8 border-t-4 border-primary">
+                            
+                            <!-- Tab 1 -->
+                            <div id="tab1" class="tab-panel active">
+                                <h3 class="text-2xl font-bold text-gray-800 mb-4 flex items-center"><i class="fa-solid fa-shield-halved text-secondary mr-3"></i> Khi bạn là người bị hại</h3>
+                                <ul class="space-y-4 text-gray-600">
+                                    <li class="flex items-start"><i class="fa-solid fa-check text-green-500 mt-1 mr-3"></i> <strong>Giữ bình tĩnh:</strong> Không phản ứng lại bằng bạo lực. Cố gắng dời đi nơi khác an toàn.</li>
+                                    <li class="flex items-start"><i class="fa-solid fa-check text-green-500 mt-1 mr-3"></i> <strong>Lưu lại bằng chứng:</strong> Chụp ảnh màn hình tin nhắn đe dọa, giữ lại đồ vật bị phá hoại.</li>
+                                    <li class="flex items-start"><i class="fa-solid fa-check text-green-500 mt-1 mr-3"></i> <strong>Lên tiếng:</strong> Chia sẻ ngay với cha mẹ, giáo viên chủ nhiệm hoặc chuyên viên tâm lý trường học. Đừng chịu đựng một mình!</li>
+                                    <li class="flex items-start"><i class="fa-solid fa-check text-green-500 mt-1 mr-3"></i> <strong>Sử dụng đường dây nóng:</strong> Gọi Tổng đài Quốc gia Bảo vệ Trẻ em <strong>111</strong>.</li>
+                                </ul>
+                            </div>
+
+                            <!-- Tab 2 -->
+                            <div id="tab2" class="tab-panel">
+                                <h3 class="text-2xl font-bold text-gray-800 mb-4 flex items-center"><i class="fa-solid fa-eye text-accent mr-3"></i> Khi bạn là người chứng kiến</h3>
+                                <ul class="space-y-4 text-gray-600">
+                                    <li class="flex items-start"><i class="fa-solid fa-check text-accent mt-1 mr-3"></i> <strong>Không vô cảm / Không hùa theo:</strong> Đừng cười cợt, quay video hay cổ vũ hành vi bắt nạt.</li>
+                                    <li class="flex items-start"><i class="fa-solid fa-check text-accent mt-1 mr-3"></i> <strong>Đánh lạc hướng:</strong> Nếu an toàn, hãy tìm cách rủ nạn nhân đi chỗ khác (ví dụ: "Thầy giáo đang gọi cậu kìa").</li>
+                                    <li class="flex items-start"><i class="fa-solid fa-check text-accent mt-1 mr-3"></i> <strong>Báo cáo bí mật:</strong> Báo ngay cho giám thị, bảo vệ hoặc giáo viên một cách kín đáo để tránh bị trả thù.</li>
+                                    <li class="flex items-start"><i class="fa-solid fa-check text-accent mt-1 mr-3"></i> <strong>Động viên nạn nhân:</strong> Hỏi thăm và khuyên họ tìm sự giúp đỡ từ người lớn.</li>
+                                </ul>
+                            </div>
+
+                            <!-- Tab 3 -->
+                            <div id="tab3" class="tab-panel">
+                                <h3 class="text-2xl font-bold text-gray-800 mb-4 flex items-center"><i class="fa-solid fa-magnifying-glass text-danger mr-3"></i> Dấu hiệu nhận biết nạn nhân</h3>
+                                <ul class="space-y-4 text-gray-600">
+                                    <li class="flex items-start"><i class="fa-solid fa-triangle-exclamation text-danger mt-1 mr-3"></i> <strong>Thế chất:</strong> Có những vết bầm tím, trầy xước quần áo rách không rõ nguyên nhân. Đồ dùng học tập hay bị mất/hỏng.</li>
+                                    <li class="flex items-start"><i class="fa-solid fa-triangle-exclamation text-danger mt-1 mr-3"></i> <strong>Tâm lý:</strong> Đột nhiên trầm cảm, hay lo âu, dễ giật mình, mất ngủ hoặc thường xuyên gặp ác mộng.</li>
+                                    <li class="flex items-start"><i class="fa-solid fa-triangle-exclamation text-danger mt-1 mr-3"></i> <strong>Học tập:</strong> Kết quả học tập sa sút, thường xuyên xin nghỉ học, sợ đi học hoặc sợ đi trên một con đường nhất định.</li>
+                                </ul>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="quiz" class="py-24 bg-white">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-heading font-bold text-primary mb-4">Bạn Đã Hiểu Rõ Chưa?</h2>
+                <p class="text-gray-600">Làm bài trắc nghiệm nhỏ dưới đây để kiểm tra kiến thức của bạn nhé!</p>
+            </div>
+
+            <div class="bg-gray-50 rounded-2xl p-8 shadow-inner border border-gray-200" id="quiz-container">
+                <!-- Question 1 -->
+                <div class="quiz-q block mb-8" data-step="1">
+                    <h3 class="text-xl font-bold text-gray-800 mb-6">1. Nếu bạn vô tình thấy một bài đăng trên Facebook đang chế giễu ngoại hình của bạn cùng lớp, bạn nên làm gì?</h3>
+                    <div class="space-y-3">
+                        <button class="quiz-btn w-full text-left p-4 rounded-xl border-2 border-gray-200 bg-white hover:border-secondary hover:bg-blue-50 transition" data-correct="false">
+                            A. Like và comment hùa theo cho vui.
+                        </button>
+                        <button class="quiz-btn w-full text-left p-4 rounded-xl border-2 border-gray-200 bg-white hover:border-secondary hover:bg-blue-50 transition" data-correct="true">
+                            B. Report (Báo cáo) bài đăng, nhắn tin an ủi bạn đó và khuyên bạn báo giáo viên.
+                        </button>
+                        <button class="quiz-btn w-full text-left p-4 rounded-xl border-2 border-gray-200 bg-white hover:border-secondary hover:bg-blue-50 transition" data-correct="false">
+                            C. Im lặng, lướt qua vì không phải chuyện của mình.
+                        </button>
+                    </div>
+                    <div class="quiz-feedback hidden mt-4 p-4 rounded-lg bg-blue-100 text-blue-800 font-medium"></div>
+                </div>
+
+                <!-- Question 2 -->
+                <div class="quiz-q hidden mb-8" data-step="2">
+                    <h3 class="text-xl font-bold text-gray-800 mb-6">2. Hành vi nào sau đây KHÔNG phải là bạo lực học đường?</h3>
+                    <div class="space-y-3">
+                        <button class="quiz-btn w-full text-left p-4 rounded-xl border-2 border-gray-200 bg-white hover:border-secondary hover:bg-blue-50 transition" data-correct="false">
+                            A. Chặn đường tống tiền ăn sáng của em khối dưới.
+                        </button>
+                        <button class="quiz-btn w-full text-left p-4 rounded-xl border-2 border-gray-200 bg-white hover:border-secondary hover:bg-blue-50 transition" data-correct="false">
+                            B. Cố tình lập group chat để cô lập, nói xấu một bạn.
+                        </button>
+                        <button class="quiz-btn w-full text-left p-4 rounded-xl border-2 border-gray-200 bg-white hover:border-secondary hover:bg-blue-50 transition" data-correct="true">
+                            C. Tranh luận gay gắt với bạn về một bài toán khó trong giờ học.
+                        </button>
+                    </div>
+                    <div class="quiz-feedback hidden mt-4 p-4 rounded-lg bg-blue-100 text-blue-800 font-medium"></div>
+                </div>
+
+                <!-- Question 3 -->
+                <div class="quiz-q hidden mb-8" data-step="3">
+                    <h3 class="text-xl font-bold text-gray-800 mb-6">3. Số điện thoại Tổng đài điện thoại Quốc gia Bảo vệ Trẻ em là số mấy?</h3>
+                    <div class="space-y-3">
+                        <button class="quiz-btn w-full text-left p-4 rounded-xl border-2 border-gray-200 bg-white hover:border-secondary hover:bg-blue-50 transition" data-correct="false">
+                            A. 113
+                        </button>
+                        <button class="quiz-btn w-full text-left p-4 rounded-xl border-2 border-gray-200 bg-white hover:border-secondary hover:bg-blue-50 transition" data-correct="true">
+                            B. 111
+                        </button>
+                        <button class="quiz-btn w-full text-left p-4 rounded-xl border-2 border-gray-200 bg-white hover:border-secondary hover:bg-blue-50 transition" data-correct="false">
+                            C. 115
+                        </button>
+                    </div>
+                    <div class="quiz-feedback hidden mt-4 p-4 rounded-lg bg-blue-100 text-blue-800 font-medium"></div>
+                </div>
+
+                <div class="mt-8 text-right hidden" id="next-q-container">
+                    <button id="next-q-btn" class="bg-primary text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-800 transition">Câu tiếp theo <i class="fa-solid fa-arrow-right ml-2"></i></button>
+                </div>
+                
+                <div class="mt-8 text-center hidden" id="quiz-complete">
+                    <div class="w-20 h-20 bg-green-100 text-green-500 rounded-full flex items-center justify-center text-4xl mx-auto mb-4">
+                        <i class="fa-solid fa-award"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-800">Tuyệt vời!</h3>
+                    <p class="text-gray-600 mt-2">Bạn đã trang bị đủ kiến thức cơ bản. Giờ hãy cùng ký cam kết nhé!</p>
+                    <button onclick="document.getElementById('pledge').scrollIntoView({behavior: 'smooth'})" class="mt-6 bg-accent text-white px-8 py-3 rounded-full font-bold hover:bg-orange-600 transition shadow-lg transform hover:-translate-y-1">Đến Góc Cam Kết</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="pledge" class="py-24 bg-gradient-to-b from-blue-900 to-blue-950 text-white relative overflow-hidden">
+        <!-- Floating background shapes -->
+        <div class="absolute top-0 left-0 w-full h-full overflow-hidden opacity-10 pointer-events-none">
+            <div class="absolute w-64 h-64 bg-white rounded-full mix-blend-overlay filter blur-3xl top-10 left-10 animate-pulse"></div>
+            <div class="absolute w-96 h-96 bg-accent rounded-full mix-blend-overlay filter blur-3xl bottom-10 right-10 animate-pulse" style="animation-delay: 2s;"></div>
+        </div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="text-center mb-12">
+                <h2 class="text-4xl md:text-5xl font-heading font-black text-3d mb-4">GÓC CAM KẾT</h2>
+                <p class="text-xl text-blue-200">Hãy để lại tên của bạn để tạo thành bức tường bảo vệ vững chắc!</p>
+            </div>
+
+            <!-- Input Form -->
+            <div class="max-w-md mx-auto bg-white/10 backdrop-blur-md p-6 rounded-2xl border border-white/20 shadow-2xl mb-16">
+                <form id="pledge-form" class="flex flex-col gap-4">
+                    <input type="text" id="pledge-name" placeholder="Nhập tên của bạn (VD: Nguyễn Văn A)" required maxlength="25"
+                           class="w-full px-5 py-4 rounded-xl bg-white/90 text-gray-900 font-semibold focus:outline-none focus:ring-4 focus:ring-accent/50 placeholder-gray-500 shadow-inner">
+                    <button type="submit" class="w-full py-4 bg-gradient-to-r from-accent to-orange-600 hover:from-orange-500 hover:to-red-500 text-white rounded-xl font-bold text-lg shadow-lg transform transition hover:-translate-y-1">
+                        <i class="fa-solid fa-hand-sparkles mr-2"></i> Tôi Xin Cam Kết!
+                    </button>
+                    <div id="pledge-msg" class="text-green-400 text-center font-semibold text-sm hidden mt-2">
+                        <i class="fa-solid fa-circle-check"></i> Cảm ơn bạn đã đồng hành!
+                    </div>
+                </form>
+            </div>
+
+            <!-- 3D Floating Grid for Pledges -->
+            <div class="relative min-h-[400px]">
+                <h3 class="text-center text-blue-300 font-semibold mb-8 uppercase tracking-widest text-sm">Bức Tường Cam Kết</h3>
+                <div id="pledge-grid" class="flex flex-wrap justify-center gap-6 perspective-1000">
+                    <!-- Pledges will be injected here via JS -->
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 py-10 border-t border-gray-800 text-center text-gray-400">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-center items-center gap-3 mb-6">
+                <i class="fa-solid fa-shield-heart text-3xl text-gray-600"></i>
+                <span class="font-heading font-bold text-2xl tracking-wider text-gray-500">SafeSchool</span>
+            </div>
+            <p>&copy; 2026 Dự án tuyên truyền phòng chống bạo lực học đường.</p>
+            <p class="mt-2 text-sm">Thiết kế với <i class="fa-solid fa-heart text-red-500/50"></i> và công nghệ 3D Web.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            // --- 1. Navbar Scroll Effect & Mobile Menu ---
+            const navbar = document.getElementById('navbar');
+            const mobileBtn = document.getElementById('mobile-menu-btn');
+            const mobileMenu = document.getElementById('mobile-menu');
+
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 50) {
+                    navbar.classList.add('py-0');
+                    navbar.classList.replace('glass', 'bg-white');
+                    navbar.classList.add('shadow-md');
+                } else {
+                    navbar.classList.remove('py-0');
+                    navbar.classList.replace('bg-white', 'glass');
+                    navbar.classList.remove('shadow-md');
+                }
+            });
+
+            mobileBtn.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+            
+            mobileMenu.querySelectorAll('a').forEach(link => {
+                link.addEventListener('click', () => mobileMenu.classList.add('hidden'));
+            });
+
+            // --- 2. THREE.JS Hero Background Animation ---
+            function initThreeJS() {
+                const container = document.getElementById('hero-canvas');
+                
+                const scene = new THREE.Scene();
+                
+                // Add Fog to blend into background
+                scene.fog = new THREE.FogExp2(0x1e3a8a, 0.002);
+
+                const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                camera.position.z = 25;
+
+                const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.setPixelRatio(window.devicePixelRatio);
+                container.appendChild(renderer.domElement);
+
+                // Lighting
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+                scene.add(ambientLight);
+                
+                const pointLight1 = new THREE.PointLight(0x3b82f6, 1.5, 100);
+                pointLight1.position.set(10, 10, 10);
+                scene.add(pointLight1);
+                
+                const pointLight2 = new THREE.PointLight(0xf97316, 2, 100); // Orange light
+                pointLight2.position.set(-10, -10, 10);
+                scene.add(pointLight2);
+
+                // Central Object: A 3D Icosahedron representing a "Shield/Gem"
+                const geometry = new THREE.IcosahedronGeometry(8, 0); // Flat shading style
+                const material = new THREE.MeshStandardMaterial({ 
+                    color: 0x3b82f6,
+                    roughness: 0.2,
+                    metalness: 0.8,
+                    flatShading: true,
+                    wireframe: false,
+                    transparent: true,
+                    opacity: 0.9
+                });
+                const shieldMesh = new THREE.Mesh(geometry, material);
+                
+                // Add wireframe outer shell
+                const wireMaterial = new THREE.MeshBasicMaterial({ color: 0x60a5fa, wireframe: true, transparent: true, opacity: 0.3 });
+                const wireMesh = new THREE.Mesh(new THREE.IcosahedronGeometry(9, 1), wireMaterial);
+                
+                const group = new THREE.Group();
+                group.add(shieldMesh);
+                group.add(wireMesh);
+                scene.add(group);
+
+                // Particles around the shield
+                const particlesGeometry = new THREE.BufferGeometry();
+                const particlesCount = 300;
+                const posArray = new Float32Array(particlesCount * 3);
+                for(let i = 0; i < particlesCount * 3; i++) {
+                    posArray[i] = (Math.random() - 0.5) * 60;
+                }
+                particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+                const particlesMaterial = new THREE.PointsMaterial({
+                    size: 0.2,
+                    color: 0xf97316, // Orange particles
+                    transparent: true,
+                    opacity: 0.8,
+                    blending: THREE.AdditiveBlending
+                });
+                const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+                scene.add(particlesMesh);
+
+                // Mouse interaction for the 3D object
+                let mouseX = 0;
+                let mouseY = 0;
+                let targetX = 0;
+                let targetY = 0;
+                const windowHalfX = window.innerWidth / 2;
+                const windowHalfY = window.innerHeight / 2;
+
+                document.addEventListener('mousemove', (event) => {
+                    mouseX = (event.clientX - windowHalfX);
+                    mouseY = (event.clientY - windowHalfY);
+                });
+
+                // Animation Loop
+                const clock = new THREE.Clock();
+
+                function animate() {
+                    requestAnimationFrame(animate);
+                    const elapsedTime = clock.getElapsedTime();
+
+                    // Smooth rotation tracking mouse
+                    targetX = mouseX * 0.001;
+                    targetY = mouseY * 0.001;
+                    
+                    group.rotation.y += 0.005;
+                    group.rotation.x += 0.002;
+                    
+                    // Add hover floating effect
+                    group.position.y = Math.sin(elapsedTime * 1.5) * 1.5;
+
+                    // Mouse parallax effect
+                    group.rotation.y += 0.05 * (targetX - group.rotation.y);
+                    group.rotation.x += 0.05 * (targetY - group.rotation.x);
+
+                    // Rotate particles slowly
+                    particlesMesh.rotation.y = -elapsedTime * 0.05;
+
+                    renderer.render(scene, camera);
+                }
+
+                animate();
+
+                // Handle Resize
+                window.addEventListener('resize', () => {
+                    camera.aspect = window.innerWidth / window.innerHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(window.innerWidth, window.innerHeight);
+                });
+            }
+
+            // Initialize Three.js only if on Desktop (optional performance check, but modern phones handle it fine)
+            initThreeJS();
+
+
+            // --- 3. 3D Tabs Logic ---
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            const tabPanels = document.querySelectorAll('.tab-panel');
+
+            tabBtns.forEach((btn, index) => {
+                btn.addEventListener('click', () => {
+                    // Remove active from all btns
+                    tabBtns.forEach(b => {
+                        b.classList.remove('bg-primary', 'text-white', 'active');
+                        b.classList.add('text-gray-500');
+                    });
+                    // Add active to clicked
+                    btn.classList.remove('text-gray-500');
+                    btn.classList.add('bg-primary', 'text-white', 'active');
+
+                    const targetId = btn.getAttribute('data-target');
+                    let targetIndex = 0;
+
+                    tabPanels.forEach((panel, i) => {
+                        if (panel.id === targetId) targetIndex = i;
+                    });
+
+                    tabPanels.forEach((panel, i) => {
+                        panel.classList.remove('active', 'inactive-left');
+                        // Determine direction of 3D flip based on index
+                        if (i < targetIndex) {
+                            panel.style.transform = 'rotateY(-90deg) translateZ(50px)';
+                        } else if (i > targetIndex) {
+                            panel.style.transform = 'rotateY(90deg) translateZ(50px)';
+                        }
+                        panel.style.opacity = '0';
+                        panel.style.pointerEvents = 'none';
+                    });
+
+                    setTimeout(() => {
+                        const targetPanel = document.getElementById(targetId);
+                        targetPanel.classList.add('active');
+                        targetPanel.style.transform = 'rotateY(0deg) translateZ(0)';
+                    }, 50); // slight delay to ensure transition triggers
+                });
+            });
+
+
+            // --- 4. Quiz Logic ---
+            const questions = document.querySelectorAll('.quiz-q');
+            const nextBtnContainer = document.getElementById('next-q-container');
+            const nextBtn = document.getElementById('next-q-btn');
+            const quizComplete = document.getElementById('quiz-complete');
+            let currentStep = 1;
+
+            questions.forEach(q => {
+                const btns = q.querySelectorAll('.quiz-btn');
+                const feedback = q.querySelector('.quiz-feedback');
+                
+                btns.forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        // Disable all buttons in this question
+                        btns.forEach(b => {
+                            b.disabled = true;
+                            b.classList.remove('hover:border-secondary', 'hover:bg-blue-50');
+                            b.classList.add('opacity-70', 'cursor-not-allowed');
+                        });
+
+                        const isCorrect = this.getAttribute('data-correct') === 'true';
+                        
+                        if (isCorrect) {
+                            this.classList.add('correct-ans');
+                            this.classList.remove('opacity-70');
+                            feedback.innerHTML = '<i class="fa-solid fa-circle-check text-green-600 mr-2"></i> <strong>Chính xác!</strong> Đây là cách hành xử đúng đắn.';
+                            feedback.classList.replace('bg-blue-100', 'bg-green-100');
+                            feedback.classList.replace('text-blue-800', 'text-green-800');
+                        } else {
+                            this.classList.add('wrong-ans');
+                            this.classList.remove('opacity-70');
+                            // highlight the correct one
+                            q.querySelector('[data-correct="true"]').classList.add('border-green-500', 'bg-green-50');
+                            q.querySelector('[data-correct="true"]').classList.remove('opacity-70');
+                            
+                            feedback.innerHTML = '<i class="fa-solid fa-circle-xmark text-red-600 mr-2"></i> <strong>Chưa đúng!</strong> Hãy xem lại cách ứng xử an toàn nhé.';
+                            feedback.classList.replace('bg-blue-100', 'bg-red-100');
+                            feedback.classList.replace('text-blue-800', 'text-red-800');
+                        }
+                        
+                        feedback.classList.remove('hidden');
+                        
+                        // Show next button if not last question
+                        if (currentStep < questions.length) {
+                            nextBtnContainer.classList.remove('hidden');
+                        } else {
+                            setTimeout(() => {
+                                quizComplete.classList.remove('hidden');
+                            }, 1000);
+                        }
+                    });
+                });
+            });
+
+            nextBtn.addEventListener('click', () => {
+                const currentQ = document.querySelector(`.quiz-q[data-step="${currentStep}"]`);
+                currentQ.classList.add('hidden');
+                
+                currentStep++;
+                const nextQ = document.querySelector(`.quiz-q[data-step="${currentStep}"]`);
+                nextQ.classList.remove('hidden');
+                nextBtnContainer.classList.add('hidden');
+            });
+
+
+            // --- 5. Pledge Logic (LocalStorage) ---
+            const form = document.getElementById('pledge-form');
+            const input = document.getElementById('pledge-name');
+            const grid = document.getElementById('pledge-grid');
+            const msg = document.getElementById('pledge-msg');
+            const STORAGE_KEY = 'school_violence_pledges';
+
+            // Array of random subtle background colors for cards
+            const cardColors = [
+                'bg-gradient-to-br from-blue-500 to-blue-700',
+                'bg-gradient-to-br from-indigo-500 to-purple-600',
+                'bg-gradient-to-br from-teal-400 to-emerald-600',
+                'bg-gradient-to-br from-orange-400 to-red-500',
+                'bg-gradient-to-br from-pink-500 to-rose-600'
+            ];
+
+            function getPledges() {
+                const data = localStorage.getItem(STORAGE_KEY);
+                return data ? JSON.parse(data) : [];
+            }
+
+            function savePledge(name) {
+                const pledges = getPledges();
+                const newPledge = {
+                    id: Date.now(),
+                    name: name,
+                    date: new Date().toLocaleDateString('vi-VN'),
+                    colorIndex: Math.floor(Math.random() * cardColors.length)
+                };
+                pledges.unshift(newPledge); // Add to beginning
+                
+                // Keep only top 30 to prevent UI clutter
+                if(pledges.length > 30) pledges.pop(); 
+                
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(pledges));
+                return newPledge;
+            }
+
+            function createCardHTML(pledge) {
+                const colorClass = cardColors[pledge.colorIndex];
+                // Random float delay for organic movement
+                const animDelay = (Math.random() * 2).toFixed(2);
+                
+                return `
+                    <div class="pledge-card ${colorClass} w-48 p-4 rounded-xl shadow-lg border border-white/20 flex flex-col items-center justify-center text-center m-2" style="animation-delay: ${animDelay}s;">
+                        <i class="fa-solid fa-quote-left text-white/30 text-2xl mb-2"></i>
+                        <h4 class="font-bold text-white text-lg leading-tight mb-1 break-words w-full">${pledge.name}</h4>
+                        <div class="w-8 h-1 bg-white/50 rounded-full my-2"></div>
+                        <span class="text-xs text-white/80"><i class="fa-regular fa-calendar-check mr-1"></i> ${pledge.date}</span>
+                    </div>
+                `;
+            }
+
+            function renderPledges() {
+                const pledges = getPledges();
+                if (pledges.length === 0) {
+                    // Mock data for initial view
+                    grid.innerHTML = `
+                        <div class="text-white/50 text-center w-full py-10 italic">
+                            Chưa có cam kết nào. Hãy là người đầu tiên!
+                        </div>
+                    `;
+                    return;
+                }
+                
+                grid.innerHTML = pledges.map(p => createCardHTML(p)).join('');
+                
+                // Re-init VanillaTilt for new dynamic elements if needed, 
+                // but pure CSS 3D float is better for performance on many items.
+                // We used CSS @keyframes float-3d above.
+            }
+
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const name = input.value.trim();
+                if (name) {
+                    savePledge(name);
+                    input.value = '';
+                    renderPledges();
+                    
+                    // Show success msg
+                    msg.classList.remove('hidden');
+                    msg.classList.add('animate-pulse');
+                    setTimeout(() => {
+                        msg.classList.add('hidden');
+                        msg.classList.remove('animate-pulse');
+                    }, 3000);
+                }
+            });
+
+            // Initial render
+            // Add a few mock pledges if empty just to show the UI
+            if (getPledges().length === 0) {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify([
+                    {id: 1, name: 'Minh Tuấn', date: new Date().toLocaleDateString('vi-VN'), colorIndex: 0},
+                    {id: 2, name: 'Hải Yến', date: new Date().toLocaleDateString('vi-VN'), colorIndex: 1},
+                    {id: 3, name: 'Trần Văn Bảo', date: new Date().toLocaleDateString('vi-VN'), colorIndex: 3},
+                ]));
+            }
+            renderPledges();
+        });
+    </script>
+</body>
+</html>
